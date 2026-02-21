@@ -1,0 +1,16 @@
+[
+  {
+    "title": "ローカルテスト記事 1",
+    "link": "https://example.com/test1",
+    "source": "Test Source",
+    "region": "Japan",
+    "summary": "これはテスト記事1の要約です。",
+    "analysis": {
+      "affirmative": "これは肯定的なテスト分析です。最新のAI技術は非常に有望です。",
+      "critical": "これは批判的なテスト分析です。計算リソースの消費が課題です。",
+      "market": "GPT-4と比較して、このモデルは特定のタスクで優れています。",
+      "editor_summary": "全体として、この技術は業界に大きな影響を与えるでしょう。",
+      "knowledge": "LLMとは大規模言語モデルのことです。"
+    }
+  }
+]

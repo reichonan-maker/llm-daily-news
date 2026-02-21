@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime, timedelta, timezone
 from googleapiclient.discovery import build
-import google.generativeai as genai
+from google import genai
 from config import *
 
 # --- Logger (簡易版) ---
@@ -14,24 +14,43 @@ def log(message):
 def collect_rss():
     log("Starting RSS collection...")
     articles = []
+    threshold = datetime.now(timezone.utc) - timedelta(hours=48)
+    
     for source in RSS_SOURCES:
         try:
+            log(f"Fetching from {source['name']}...")
             feed = feedparser.parse(source["url"])
+            if not feed.entries:
+                log(f"  Warning: No entries found in feed for {source['name']}")
+                continue
+                
+            count = 0
             for entry in feed.entries:
-                # 過去24時間以内の記事に限定 (目安)
-                # entry.published_parsed がない場合はスキップされる可能性があるが、
-                # 実運用では GitHub Actions が毎日回るため、取得できたものは新着とみなす
-                articles.append({
-                    "title": entry.title,
-                    "link": entry.link,
-                    "summary": entry.get("summary", entry.get("description", "")),
-                    "source": source["name"],
-                    "region": source["region"],
-                    "priority": source.get("priority", "normal")
-                })
+                # 日付取得と判定 (48時間以内に緩和)
+                published = None
+                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                    published = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+                elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
+                    published = datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc)
+                
+                # 日付が不明な場合は念のため「本日のニュース」として扱う
+                if published is None or published >= threshold:
+                    articles.append({
+                        "title": entry.title,
+                        "link": entry.link,
+                        "summary": entry.get("summary", entry.get("description", "")),
+                        "source": source["name"],
+                        "region": source["region"],
+                        "priority": source.get("priority", "normal")
+                    })
+                    count += 1
+            log(f"  Collected {count} new/recent articles from {source['name']}.")
         except Exception as e:
+            import traceback
             log(f"Error collecting from {source['name']}: {e}")
-    log(f"Collected {len(articles)} articles from RSS.")
+            log(traceback.format_exc())
+            
+    log(f"TOTAL articles collected from RSS: {len(articles)}")
     return articles
 
 # --- Phase 1: Google Search Monitor ---
@@ -44,7 +63,6 @@ def collect_search():
     service = build("customsearch", "v1", developerKey=GOOGLE_SEARCH_API_KEY)
     articles = []
     
-    # 基本的に監視対象を1つずつ回る (リクエスト制限に注意)
     for source in SEARCH_MONITOR_SOURCES:
         try:
             query = f"site:{source['domain']}"
@@ -68,6 +86,8 @@ def collect_search():
             log(f"Error collecting from {source['name']} via search: {e}")
             
     log(f"Collected {len(articles)} articles from Search.")
+    if not articles:
+        log("Warning: No articles found via Google Search monitor.")
     return articles
 
 # --- Phase 2: Selection (Filtering with Gemini) ---
@@ -75,15 +95,13 @@ def select_articles(articles):
     if not articles:
         return []
 
-    log(f"Starting selection phase for {len(articles)} articles...")
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel(MODEL_FLASH)
+    log(f"Starting selection phase for {len(articles)} articles using {MODEL_FLASH}...")
+    
+    # 最新の google-genai SDK への移行
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
     # 重複排除 (URL基準)
     unique_articles = {a["link"]: a for a in articles}.values()
-    
-    # 記事が多すぎる場合、Gemini に渡すリストを制限するか、分割してリクエストする
-    # 今回は上位100件程度に絞って Gemini に投げる
     candidate_list = list(unique_articles)[:100]
     
     prompt = f"""
@@ -98,7 +116,12 @@ def select_articles(articles):
         prompt += f"- TITLE: {a['title']}\n  URL: {a['link']}\n  REGION: {a['region']}\n\n"
 
     try:
-        response = model.generate_content(prompt)
+        # 最新の SDK 文法で generate_content を呼び出し
+        response = client.models.generate_content(
+            model=MODEL_FLASH,
+            contents=prompt
+        )
+        
         selected_urls = [line.strip() for line in response.text.strip().split("\n") if "http" in line]
         
         # URLを元に元の記事情報を紐付け
@@ -106,7 +129,9 @@ def select_articles(articles):
         log(f"Gemini selected {len(selected_articles)} articles.")
         return selected_articles
     except Exception as e:
+        import traceback
         log(f"Error in selection phase: {e}")
+        log(traceback.format_exc())
         # エラー時はフォールバックとして最初の数件を返す
         return candidate_list[:MIN_ARTICLE_COUNT]
 

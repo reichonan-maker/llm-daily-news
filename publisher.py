@@ -28,9 +28,11 @@ def publish_to_notion():
 
     log(f"Publishing {len(articles)} detailed articles to Notion...")
     
+    success_count = 0
     for article in articles:
         analysis = article.get("analysis")
         if not analysis:
+            log(f"  Skipping {article['title']}: No analysis data found.")
             continue
             
         try:
@@ -118,10 +120,19 @@ def publish_to_notion():
                 ]
             )
             log(f"Successfully published: {article['title']}")
+            success_count += 1
         except Exception as e:
+            import traceback
             log(f"Error publishing {article['title']}: {e}")
+            log(traceback.format_exc())
 
-    log("Notion publication process completed.")
+    log(f"Notion publication process completed. Total successfully published: {success_count} / {len(articles)}")
 
 if __name__ == "__main__":
-    publish_to_notion()
+    try:
+        publish_to_notion()
+    except Exception as e:
+        import traceback
+        log(f"Critical error in publisher main: {e}")
+        log(traceback.format_exc())
+        raise e

@@ -1,0 +1,82 @@
+[
+  {
+    "title": "I Verified My LinkedIn Identity. Here's What I Handed Over",
+    "link": "https://thelocalstack.eu/posts/linkedin-identity-verification-privacy/",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47098245\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "Keep Android Open",
+    "link": "https://f-droid.org/2026/02/20/twif.html",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47091419\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "macOS's Little-Known Command-Line Sandboxing Tool (2025)",
+    "link": "https://igorstechnoclub.com/sandbox-exec/",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47101200\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "AI uBlock Blacklist",
+    "link": "https://github.com/alvi-se/ai-ublock-blacklist",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47098582\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "I found a Vulnerability. They found a Lawyer",
+    "link": "https://dixken.de/blog/i-found-a-vulnerability-they-found-a-lawyer",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47092578\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "Turn Dependabot off",
+    "link": "https://words.filippo.io/dependabot/",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47094192\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "Facebook is cooked",
+    "link": "https://pilk.website/3/facebook-is-absolutely-cooked",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47091748\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "Andrej Karpathy talks about \"Claws\"",
+    "link": "https://simonwillison.net/2026/Feb/21/claws/",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47099160\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "Ggml.ai joins Hugging Face to ensure the long-term progress of Local AI",
+    "link": "https://github.com/ggml-org/llama.cpp/discussions/19759",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47088037\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  },
+  {
+    "title": "Wikipedia deprecates Archive.today, starts removing archive links",
+    "link": "https://arstechnica.com/tech-policy/2026/02/wikipedia-bans-archive-today-after-site-executed-ddos-and-altered-web-captures/",
+    "summary": "<a href=\"https://news.ycombinator.com/item?id=47092006\">Comments</a>",
+    "source": "Hacker News",
+    "region": "North America",
+    "priority": "high"
+  }
+]

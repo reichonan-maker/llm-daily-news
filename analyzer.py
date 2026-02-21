@@ -2,7 +2,7 @@ from datetime import datetime, timezone, timedelta
 import json
 import os
 import time
-import google.generativeai as genai
+from google import genai
 from config import *
 
 def log(message):
@@ -10,13 +10,15 @@ def log(message):
 
 class Analyzer:
     def __init__(self):
-        genai.configure(api_key=GEMINI_API_KEY)
-        self.model_pro = genai.GenerativeModel(MODEL_PRO)
+        # 最新の google-genai SDK では Client 初期化時に api_key を渡すか環境変数 GEMINI_API_KEY を参照します。
+        # config.py から GEMINI_API_KEY を明示的に渡します。
+        self.client = genai.Client(api_key=GEMINI_API_KEY)
         self.current_cost_estimate = 0.0
 
     def analyze_article(self, article):
         """
         1つの記事に対して、肯定・批判・編集長の3役による多角的分析を行う。
+        最新の google-genai SDK (gemini-3-flash モデル) を使用。
         """
         log(f"Analyzing: {article['title']}...")
         
@@ -49,8 +51,13 @@ class Analyzer:
 JSON以外のテキストは一切含めないでください。
 """
         try:
-            response = self.model_pro.generate_content(prompt)
-            # JSON部分の抽出 (稀にMarkdownのデコレーションが入るため)
+            # モデル名はユーザー指定の "gemini-3-flash" を使用
+            response = self.client.models.generate_content(
+                model="gemini-3-flash",
+                contents=prompt
+            )
+            
+            # JSON部分の抽出
             text = response.text.strip()
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()
@@ -60,7 +67,9 @@ JSON以外のテキストは一切含めないでください。
             analysis_data = json.loads(text)
             return analysis_data
         except Exception as e:
+            import traceback
             log(f"Error analyzing {article['title']}: {e}")
+            log(traceback.format_exc())
             return None
 
     def run(self, input_file, output_file):
@@ -72,9 +81,6 @@ JSON以外のテキストは一切含めないでください。
             articles = json.load(f)
 
         analyzed_articles = []
-        
-        # 予算と時間の制限を考慮しつつ順次処理
-        # (GitHub Actions のタイムアウトに注意し、必要に応じて記事数を制限)
         target_articles = articles[:TARGET_ARTICLE_COUNT]
         
         for article in target_articles:
@@ -86,10 +92,9 @@ JSON以外のテキストは一切含めないでください。
             if analysis:
                 article["analysis"] = analysis
                 analyzed_articles.append(article)
-                self.current_cost_estimate += 0.005 # Gemini Pro の概算コスト
+                self.current_cost_estimate += 0.005
             
-            # APIレート制限対策のインターバル
-            time.sleep(2)
+            time.sleep(1) # API制限に合せた待機
 
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(analyzed_articles, f, ensure_ascii=False, indent=2)
