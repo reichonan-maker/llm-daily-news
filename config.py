@@ -2,7 +2,6 @@ import os
 
 # --- API Keys & IDs (GitHub Secrets を想定) ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
 GOOGLE_SEARCH_CX = os.getenv("GOOGLE_SEARCH_CX")
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")

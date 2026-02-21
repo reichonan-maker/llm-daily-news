@@ -1,7 +1,6 @@
 feedparser
 google-generativeai
 google-api-python-client
-openai
 notion-client
 requests
 python-dateutil
