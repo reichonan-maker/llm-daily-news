@@ -77,7 +77,7 @@ def select_articles(articles):
 
     log(f"Starting selection phase for {len(articles)} articles...")
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel(MODEL_FLASH)
 
     # 重複排除 (URL基準)
     unique_articles = {a["link"]: a for a in articles}.values()

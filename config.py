@@ -7,6 +7,10 @@ GOOGLE_SEARCH_CX = os.getenv("GOOGLE_SEARCH_CX")
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = "2f004f93e9a98084a920c64d21777baf"
 
+# --- AI Models ---
+MODEL_PRO = "gemini-3.1-pro"
+MODEL_FLASH = "gemini-3-flash"
+
 # --- Budget & Limits ---
 DAILY_BUDGET_USD = 0.25
 GOOGLE_SEARCH_DAILY_LIMIT = 100

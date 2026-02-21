@@ -11,7 +11,7 @@ def log(message):
 class Analyzer:
     def __init__(self):
         genai.configure(api_key=GEMINI_API_KEY)
-        self.model_pro = genai.GenerativeModel("gemini-1.5-pro")
+        self.model_pro = genai.GenerativeModel(MODEL_PRO)
         self.current_cost_estimate = 0.0
 
     def analyze_article(self, article):
