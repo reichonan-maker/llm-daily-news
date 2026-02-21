@@ -11,7 +11,8 @@ def create_rich_text(content):
     """
     Notion の文字制限 (2000文字) に配慮しつつリッチテキスト構造を作成。
     """
-    return [{"text": {"content": content[:2000]}}]
+    if not content: return [{"text": {"content": " (No content) "}}]
+    return [{"text": {"content": str(content)[:2000]}}]
 
 def publish_to_notion():
     if not os.path.exists("analysis_report.json"):
@@ -36,7 +37,7 @@ def publish_to_notion():
             continue
             
         try:
-            # 1. データベースページの作成と Children Blocks の定義
+            # データベースページの作成と Children Blocks の定義
             notion.pages.create(
                 parent={"database_id": NOTION_DATABASE_ID},
                 properties={
@@ -51,62 +52,52 @@ def publish_to_notion():
                     {
                         "object": "block",
                         "type": "heading_2",
-                        "heading_2": {"rich_text": [{"text": {"content": "肯定視点：革新とメリット"}}]}
-                    },
+                        "heading_2": {"rich_text": [{"text": {"content": "肯定視点：革新とメリット"}}]}},
                     {
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {"rich_text": create_rich_text(analysis.get("affirmative", ""))}
-                    },
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("affirmative"))}},
                     # 2. 批判的視点
                     {
                         "object": "block",
                         "type": "heading_2",
-                        "heading_2": {"rich_text": [{"text": {"content": "批判的視点：課題とリスク"}}]}
-                    },
+                        "heading_2": {"rich_text": [{"text": {"content": "批判的視点：課題とリスク"}}]}},
                     {
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {"rich_text": create_rich_text(analysis.get("critical", ""))}
-                    },
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("critical"))}},
                     # 3. 競合・市場比較
                     {
                         "object": "block",
                         "type": "heading_2",
-                        "heading_2": {"rich_text": [{"text": {"content": "競合・市場比較"}}]}
-                    },
+                        "heading_2": {"rich_text": [{"text": {"content": "競合・市場比較"}}]}},
                     {
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {"rich_text": create_rich_text(analysis.get("market", ""))}
-                    },
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("market"))}},
                     # 4. 編集長まとめ
                     {
                         "object": "block",
                         "type": "heading_2",
-                        "heading_2": {"rich_text": [{"text": {"content": "編集長まとめ"}}]}
-                    },
+                        "heading_2": {"rich_text": [{"text": {"content": "編集長まとめ"}}]}},
                     {
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {"rich_text": create_rich_text(analysis.get("editor_summary", ""))}
-                    },
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("editor_summary"))}},
                     # 5. 今日の基礎知識 (Callout)
                     {
                         "object": "block",
                         "type": "callout",
                         "callout": {
-                            "rich_text": create_rich_text(analysis.get("knowledge", "")),
+                            "rich_text": create_rich_text(analysis.get("knowledge")),
                             "icon": {"emoji": "💡"},
                             "color": "blue_background"
-                        }
-                    },
+                        }},
                     # オリジナル記事へのリンク
                     {
                         "object": "block",
                         "type": "divider",
-                        "divider": {}
-                    },
+                        "divider": {}},
                     {
                         "object": "block",
                         "type": "paragraph",
@@ -115,8 +106,7 @@ def publish_to_notion():
                                 {"text": {"content": "原文ソース: "}},
                                 {"text": {"content": article["link"], "link": {"url": article["link"]}}}
                             ]
-                        }
-                    }
+                        }}
                 ]
             )
             log(f"Successfully published: {article['title']}")

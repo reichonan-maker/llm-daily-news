@@ -10,8 +10,7 @@ def log(message):
 
 class Analyzer:
     def __init__(self):
-        # 最新の google-genai SDK では Client 初期化時に api_key を渡すか環境変数 GEMINI_API_KEY を参照します。
-        # config.py から GEMINI_API_KEY を明示的に渡します。
+        # 最新の google-genai SDK への移行
         self.client = genai.Client(api_key=GEMINI_API_KEY)
         self.current_cost_estimate = 0.0
 
@@ -51,13 +50,11 @@ class Analyzer:
 JSON以外のテキストは一切含めないでください。
 """
         try:
-            # モデル名はユーザー指定の "gemini-3-flash" を使用
             response = self.client.models.generate_content(
                 model="gemini-3-flash",
                 contents=prompt
             )
             
-            # JSON部分の抽出
             text = response.text.strip()
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()
@@ -92,9 +89,9 @@ JSON以外のテキストは一切含めないでください。
             if analysis:
                 article["analysis"] = analysis
                 analyzed_articles.append(article)
-                self.current_cost_estimate += 0.005
+                self.current_cost_estimate += 0.005 # Gemini Flash の想定コスト
             
-            time.sleep(1) # API制限に合せた待機
+            time.sleep(1)
 
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(analyzed_articles, f, ensure_ascii=False, indent=2)
