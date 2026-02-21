@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 import json
 import os
+import time
 import google.generativeai as genai
 from config import *
 
@@ -11,86 +12,90 @@ class Analyzer:
     def __init__(self):
         genai.configure(api_key=GEMINI_API_KEY)
         self.model_pro = genai.GenerativeModel("gemini-1.5-pro")
-        self.model_flash = genai.GenerativeModel("gemini-1.5-flash")
-        self.total_cost_usd = 0.0
+        self.current_cost_estimate = 0.0
 
-    def analyze(self, articles):
-        if not articles:
-            return "ニュースが収集されなかったため、本日の分析はありません。"
-
-        log("Starting detailed analysis with Gemini Pro and Flash...")
+    def analyze_article(self, article):
+        """
+        1つの記事に対して、肯定・批判・編集長の3役による多角的分析を行う。
+        """
+        log(f"Analyzing: {article['title']}...")
         
-        # コストチェック (開始前 - Gemini は比較的安価だが一応ロジック維持)
-        if self.total_cost_usd >= DAILY_BUDGET_USD:
-            return "予算上限に達したため、詳細分析をスキップしました。"
+        prompt = f"""
+あなたは世界最高峰のIT新聞の編集部チーム（肯定派アナリスト、批判派アナリスト、編集長）です。
+以下のニュース記事について、読み応えのある多角的な分析レポートを作成してください。
 
-        # コンテキスト作成
-        context = "\n".join([f"- {a['title']} ({a['source']}): {a['link']}\n  {a['summary'][:200]}" for a in articles])
+【ニュース内容】
+タイトル: {article['title']}
+ソース: {article['source']}
+内容の要約: {article['summary']}
 
-        results = {}
+【出力指示】
+以下の5つのセクションについて、日本語で詳細に出力してください。
+各セクションの本文は300〜500文字程度の専門的かつ深い洞察を含めてください。
 
-        # 1. 肯定視点 (Gemini Pro)
-        log("Analyzing positive aspects with Gemini Pro...")
+1. [肯定視点]
+   このニュースの革新性、業界へのポジティブな影響、技術的メリットを強調して記述してください。
+2. [批判的視点]
+   あえて批判的な立場で、潜在的なリスク、隠れたコスト、実装の難易度、競合に対する優位性の欠如などを鋭く指摘してください。
+3. [競合・市場比較]
+   このニュースに関連する技術や企業を、競合（GPT-4, Claude, Llama等）と比較し、市場シェアや地政学的な文脈での立ち位置を分析してください。
+4. [編集長まとめ]
+   上記の両視点を踏まえ、一歩引いた視点から実務へのインパクトや未来予測を結論としてまとめてください。
+5. [今日の基礎知識]
+   この記事を理解するために重要な専門用語（1つ以上）を抜き出し、初心者にも分かりやすく解説してください。
+
+出力形式: JSON形式で以下のキーを持つオブジェクトとして出力してください。
+キー: "affirmative", "critical", "market", "editor_summary", "knowledge"
+JSON以外のテキストは一切含めないでください。
+"""
         try:
-            resp = self.model_pro.generate_content(f"以下のAI関連ニュースに基づき、業界の進歩やポジティブな側面を強調した分析を行ってください：\n\n{context}")
-            results["positive"] = resp.text
-            self.total_cost_usd += 0.005 # 概算
+            response = self.model_pro.generate_content(prompt)
+            # JSON部分の抽出 (稀にMarkdownのデコレーションが入るため)
+            text = response.text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].strip()
+            
+            analysis_data = json.loads(text)
+            return analysis_data
         except Exception as e:
-            results["positive"] = f"分析エラー: {e}"
+            log(f"Error analyzing {article['title']}: {e}")
+            return None
 
-        # 2. 批判・分析視点 (Gemini Pro) - DeepSeek から移行
-        log("Analyzing critical aspects with Gemini Pro...")
-        try:
-            resp_crit = self.model_pro.generate_content(f"以下のニュースについて、倫理的懸念、技術的限界、地政学的なリスクなどの『批判的・分析的視点』で考察してください：\n\n{context}")
-            results["critical"] = resp_crit.text
-            self.total_cost_usd += 0.005 # 概算
-        except Exception as e:
-            results["critical"] = f"分析エラー: {e}"
+    def run(self, input_file, output_file):
+        if not os.path.exists(input_file):
+            log(f"Input file {input_file} not found.")
+            return
 
-        # 3. 競合・市場比較 (Gemini Pro) - DeepSeek から移行
-        log("Analyzing market competition with Gemini Pro...")
-        try:
-            resp_market = self.model_pro.generate_content(f"これらのニュースを元に、各企業の競合状況や市場シェアへの影響、投資動向を分析してください：\n\n{context}")
-            results["market"] = resp_market.text
-            self.total_cost_usd += 0.005 # 概算
-        except Exception as e:
-            results["market"] = f"分析エラー: {e}"
+        with open(input_file, "r", encoding="utf-8") as f:
+            articles = json.load(f)
 
-        # 4. 編集長まとめ (Gemini Pro)
-        log("Creating editor's summary with Gemini Pro...")
-        try:
-            resp_summary = self.model_pro.generate_content(f"本日のAIニュース全体の流れを俯瞰し、編集長としての総括コメントを作成してください：\n\n{context}")
-            results["summary"] = resp_summary.text
-            self.total_cost_usd += 0.002
-        except Exception as e:
-            results["summary"] = "本日のAI動向は多岐にわたりました。"
-
-        # 5. 世界の辺境から / 今日の基礎知識 (Gemini Flash)
-        log("Creating supplementary sections with Gemini Flash...")
-        try:
-            resp_extra = self.model_flash.generate_content(f"以下のニュースの中から、特に『世界の辺境（Global South）』に関するトピックの深掘りと、関連する『今日の基礎知識（専門用語解説）』を1つ作成してください：\n\n{context}")
-            results["extra"] = resp_extra.text
-            self.total_cost_usd += 0.001
-        except Exception as e:
-            results["extra"] = "追加情報なし"
+        analyzed_articles = []
         
-        return results
+        # 予算と時間の制限を考慮しつつ順次処理
+        # (GitHub Actions のタイムアウトに注意し、必要に応じて記事数を制限)
+        target_articles = articles[:TARGET_ARTICLE_COUNT]
+        
+        for article in target_articles:
+            if self.current_cost_estimate >= DAILY_BUDGET_USD:
+                log("Budget limit reached. Skipping remaining articles.")
+                break
+                
+            analysis = self.analyze_article(article)
+            if analysis:
+                article["analysis"] = analysis
+                analyzed_articles.append(article)
+                self.current_cost_estimate += 0.005 # Gemini Pro の概算コスト
+            
+            # APIレート制限対策のインターバル
+            time.sleep(2)
 
-def main():
-    if not os.path.exists("collected_news.json"):
-        log("No news data found. Exiting.")
-        return
-
-    with open("collected_news.json", "r", encoding="utf-8") as f:
-        articles = json.load(f)
-
-    analyzer = Analyzer()
-    report = analyzer.analyze(articles)
-    
-    with open("analysis_report.json", "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-    
-    log("Analysis completed using Gemini only.")
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(analyzed_articles, f, ensure_ascii=False, indent=2)
+        
+        log(f"Total {len(analyzed_articles)} articles analyzed and saved.")
 
 if __name__ == "__main__":
-    main()
+    analyzer = Analyzer()
+    analyzer.run("collected_news.json", "analysis_report.json")

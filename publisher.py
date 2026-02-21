@@ -7,14 +7,18 @@ from config import *
 def log(message):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
+def create_rich_text(content):
+    """
+    Notion の文字制限 (2000文字) に配慮しつつリッチテキスト構造を作成。
+    """
+    return [{"text": {"content": content[:2000]}}]
+
 def publish_to_notion():
-    if not os.path.exists("analysis_report.json") or not os.path.exists("collected_news.json"):
-        log("Missing data for publication.")
+    if not os.path.exists("analysis_report.json"):
+        log("Missing analysis_report.json for publication.")
         return
 
     with open("analysis_report.json", "r", encoding="utf-8") as f:
-        report = json.load(f)
-    with open("collected_news.json", "r", encoding="utf-8") as f:
         articles = json.load(f)
 
     notion = Client(auth=NOTION_TOKEN)
@@ -22,33 +26,102 @@ def publish_to_notion():
     jst = timezone(timedelta(hours=9))
     today = datetime.now(jst).strftime("%Y-%m-%d")
 
-    # 記事ごとの要約とデータベース登録
-    log("Registering articles to Notion database...")
+    log(f"Publishing {len(articles)} detailed articles to Notion...")
+    
     for article in articles:
+        analysis = article.get("analysis")
+        if not analysis:
+            continue
+            
         try:
+            # 1. データベースページの作成と Children Blocks の定義
             notion.pages.create(
                 parent={"database_id": NOTION_DATABASE_ID},
                 properties={
                     "Name": {"title": [{"text": {"content": article["title"]}}]},
                     "Date": {"date": {"start": today}},
                     "URL": {"url": article["link"]},
-                    "Source": {"select": {"name": article["source"][:100]}}, # 100文字制限
+                    "Source": {"select": {"name": article["source"][:100]}},
                     "Tags": {"multi_select": [{"name": article["region"]}]}
                 },
                 children=[
+                    # 1. 肯定視点
+                    {
+                        "object": "block",
+                        "type": "heading_2",
+                        "heading_2": {"rich_text": [{"text": {"content": "肯定視点：革新とメリット"}}]}
+                    },
                     {
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {"rich_text": [{"text": {"content": article["summary"][:2000]}}]}
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("affirmative", ""))}
+                    },
+                    # 2. 批判的視点
+                    {
+                        "object": "block",
+                        "type": "heading_2",
+                        "heading_2": {"rich_text": [{"text": {"content": "批判的視点：課題とリスク"}}]}
+                    },
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("critical", ""))}
+                    },
+                    # 3. 競合・市場比較
+                    {
+                        "object": "block",
+                        "type": "heading_2",
+                        "heading_2": {"rich_text": [{"text": {"content": "競合・市場比較"}}]}
+                    },
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("market", ""))}
+                    },
+                    # 4. 編集長まとめ
+                    {
+                        "object": "block",
+                        "type": "heading_2",
+                        "heading_2": {"rich_text": [{"text": {"content": "編集長まとめ"}}]}
+                    },
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {"rich_text": create_rich_text(analysis.get("editor_summary", ""))}
+                    },
+                    # 5. 今日の基礎知識 (Callout)
+                    {
+                        "object": "block",
+                        "type": "callout",
+                        "callout": {
+                            "rich_text": create_rich_text(analysis.get("knowledge", "")),
+                            "icon": {"emoji": "💡"},
+                            "color": "blue_background"
+                        }
+                    },
+                    # オリジナル記事へのリンク
+                    {
+                        "object": "block",
+                        "type": "divider",
+                        "divider": {}
+                    },
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [
+                                {"text": {"content": "原文ソース: "}},
+                                {"text": {"content": article["link"], "link": {"url": article["link"]}}}
+                            ]
+                        }
                     }
                 ]
             )
+            log(f"Successfully published: {article['title']}")
         except Exception as e:
-            log(f"Error publishing article {article['title']}: {e}")
+            log(f"Error publishing {article['title']}: {e}")
 
-    # 分析レポートの作成 (必要に応じて既存のページの子ページとして作成なども検討可)
-    # ここではデータベースへの登録のみとする（要件：データベース形式）
-    log(f"Published {len(articles)} articles to Notion.")
+    log("Notion publication process completed.")
 
 if __name__ == "__main__":
     publish_to_notion()
